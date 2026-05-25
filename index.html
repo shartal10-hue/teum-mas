@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="he">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>תיאום מס - תהליך בדיקה</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif; background: #f5f5f3; min-height: 100vh; padding: 24px 16px; direction: rtl; }
+  h1 { font-size: 20px; font-weight: 500; color: #1a1a1a; margin-bottom: 4px; }
+  .subtitle { font-size: 13px; color: #888; margin-bottom: 20px; }
+  .progress-bar { height: 4px; background: #e5e5e5; border-radius: 2px; margin-bottom: 20px; overflow: hidden; }
+  .progress-fill { height: 100%; background: #00c875; border-radius: 2px; transition: width 0.4s ease; }
+  .progress-meta { display: flex; justify-content: space-between; font-size: 12px; color: #888; margin-bottom: 8px; }
+  .step-card { background: #fff; border: 1px solid #e5e5e5; border-radius: 12px; padding: 16px; margin-bottom: 10px; transition: all 0.3s; }
+  .step-card.locked { opacity: 0.4; pointer-events: none; }
+  .step-card.done { border-color: #00c875; background: #f0faf5; }
+  .step-card.active { border-color: #ccc; }
+  .step-header { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
+  .step-num { width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 500; flex-shrink: 0; background: #f0f0f0; color: #666; border: 1px solid #e0e0e0; }
+  .step-num.active { background: #e8f0fe; color: #1a73e8; border-color: #a8c7f8; }
+  .step-num.done { background: #e6f9f1; color: #00875a; border-color: #9de5c4; }
+  .step-title { font-size: 15px; font-weight: 500; color: #1a1a1a; }
+  .step-desc { font-size: 13px; color: #666; margin-bottom: 12px; line-height: 1.6; padding-right: 42px; }
+  .step-done-label { font-size: 13px; color: #00875a; padding-right: 42px; margin-bottom: 8px; }
+  .step-actions { display: flex; gap: 8px; padding-right: 42px; flex-wrap: wrap; margin-top: 10px; }
+  .btn { border-radius: 8px; padding: 7px 16px; font-size: 13px; cursor: pointer; border: 1px solid #ddd; background: #fff; color: #333; display: inline-flex; align-items: center; gap: 6px; font-family: inherit; }
+  .btn:hover { background: #f5f5f5; }
+  .btn-primary { background: #00c875; color: #fff; border-color: #00c875; font-weight: 500; }
+  .btn-primary:hover { background: #00af66; }
+  .btn-link { background: #e8f0fe; color: #1a73e8; border-color: #c5d8fd; }
+  .btn-link:hover { background: #d2e3fc; }
+  .files-list { margin-top: 8px; padding-right: 42px; display: flex; flex-wrap: wrap; gap: 6px; }
+  .file-chip { background: #f5f5f5; border: 1px solid #e5e5e5; border-radius: 8px; padding: 3px 10px; font-size: 12px; color: #555; display: flex; align-items: center; gap: 6px; }
+  .file-chip button { background: none; border: none; cursor: pointer; color: #999; font-size: 15px; padding: 0; line-height: 1; }
+  .file-chip button:hover { color: #e53935; }
+  .summary { background: #e6f9f1; border: 1px solid #9de5c4; border-radius: 12px; padding: 24px; text-align: center; margin-top: 12px; display: none; }
+  .summary h2 { color: #00875a; font-size: 18px; font-weight: 500; margin-bottom: 6px; }
+  .summary p { font-size: 13px; color: #00875a; opacity: 0.8; }
+  .checkmark { font-size: 36px; display: block; margin-bottom: 10px; }
+</style>
+</head>
+<body>
+
+<h1>בדיקת תיאום מס 2026</h1>
+<p class="subtitle">עקוב אחר 4 השלבים לבדיקת תיאום המס באזור האישי</p>
+
+<div class="progress-meta">
+  <span id="progress-label">שלב 1 מתוך 4</span>
+  <span id="progress-pct">0%</span>
+</div>
+<div class="progress-bar"><div class="progress-fill" id="progress-fill" style="width:0%"></div></div>
+
+<div id="steps-container"></div>
+<div class="summary" id="summary">
+  <span class="checkmark">✅</span>
+  <h2>כל השלבים הושלמו!</h2>
+  <p>תיאום המס בוצע בהצלחה</p>
+</div>
+
+<input type="file" id="file-input" style="display:none" multiple>
+
+<script>
+const steps = [
+  { title: "כניסה לאתר רשות המסים", desc: "נכנסים לכתובת gov.il/he/service/tax-coordination-online", link: "https://www.gov.il/he/service/tax-coordination-online" },
+  { title: "התחברות", desc: "מתחברים עם תעודת זהות + ססמה / eID / אפליקציית רשות המסים" },
+  { title: "בדיקת מכתבים", desc: 'נכנסים ל"מכתבים" — אם קיבלת הארכה אוטומטית, המכתב יהיה שם' },
+  { title: 'בדיקת "החזרי מס ותיאומי מס"', desc: "שם יופיעו כל האישורים הפעילים" }
+];
+
+let currentStep = 0;
+let stepsFiles = [[], [], [], []];
+let activeFileStep = 0;
+
+function render() {
+  const container = document.getElementById("steps-container");
+  container.innerHTML = "";
+  const pct = Math.round((currentStep / steps.length) * 100);
+  document.getElementById("progress-fill").style.width = pct + "%";
+  document.getElementById("progress-pct").textContent = pct + "%";
+  document.getElementById("progress-label").textContent = currentStep >= steps.length ? "הושלם!" : "שלב " + (currentStep + 1) + " מתוך " + steps.length;
+
+  steps.forEach(function(s, i) {
+    const isDone = i < currentStep;
+    const isActive = i === currentStep;
+    const card = document.createElement("div");
+    card.className = "step-card" + (isDone ? " done" : isActive ? " active" : " locked");
+
+    const numClass = isDone ? "done" : isActive ? "active" : "";
+    const numContent = isDone ? "✓" : (i + 1);
+
+    let filesHtml = "";
+    if (stepsFiles[i].length > 0) {
+      filesHtml = '<div class="files-list">' + stepsFiles[i].map(function(f, fi) {
+        return '<span class="file-chip">📄 ' + f.name + '<button onclick="removeFile(' + i + ',' + fi + ')">×</button></span>';
+      }).join("") + "</div>";
+    } else {
+      filesHtml = '<div class="files-list" id="files-' + i + '"></div>';
+    }
+
+    let actionsHtml = "";
+    if (isActive) {
+      actionsHtml = '<div class="step-actions">' +
+        (s.link ? '<a href="' + s.link + '" target="_blank" style="text-decoration:none"><button class="btn btn-link">🔗 פתח אתר</button></a>' : "") +
+        '<button class="btn" onclick="attachFile(' + i + ')">📎 צרף מסמך</button>' +
+        '<button class="btn btn-primary" onclick="completeStep()">סמן כהושלם ←</button>' +
+        "</div>";
+    } else if (isDone) {
+      actionsHtml = '<div class="step-actions"><button class="btn" onclick="attachFile(' + i + ')">📎 צרף מסמך</button></div>';
+    }
+
+    card.innerHTML =
+      '<div class="step-header">' +
+        '<div class="step-num ' + numClass + '">' + numContent + '</div>' +
+        '<span class="step-title">' + s.title + '</span>' +
+      '</div>' +
+      (isDone ? '<p class="step-done-label">✓ הושלם</p>' : '<p class="step-desc">' + s.desc + '</p>') +
+      filesHtml +
+      actionsHtml;
+
+    container.appendChild(card);
+  });
+
+  document.getElementById("summary").style.display = currentStep >= steps.length ? "block" : "none";
+}
+
+function completeStep() {
+  if (currentStep < steps.length) { currentStep++; render(); }
+}
+
+function attachFile(stepIndex) {
+  activeFileStep = stepIndex;
+  document.getElementById("file-input").click();
+}
+
+function removeFile(stepIndex, fileIndex) {
+  stepsFiles[stepIndex].splice(fileIndex, 1);
+  render();
+}
+
+document.getElementById("file-input").addEventListener("change", function() {
+  stepsFiles[activeFileStep] = stepsFiles[activeFileStep].concat(Array.from(this.files));
+  this.value = "";
+  render();
+});
+
+render();
+</script>
+</body>
+</html>
