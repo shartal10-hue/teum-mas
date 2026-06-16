@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="he">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>מעבדות — רשימת מעבדות</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif; background: #f5f5f3; min-height: 100vh; padding: 24px 16px; direction: rtl; }
+  h1 { font-size: 22px; font-weight: 600; color: #1a1a1a; margin-bottom: 4px; }
+  .subtitle { font-size: 13px; color: #888; margin-bottom: 20px; }
+  .search { width: 100%; max-width: 960px; margin: 0 auto 20px; display: block; padding: 10px 14px; font-size: 14px; border: 1px solid #e0e0e0; border-radius: 10px; font-family: inherit; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; max-width: 960px; margin: 0 auto; }
+  .lab-card { background: #fff; border: 1px solid #e5e5e5; border-radius: 12px; padding: 18px; text-decoration: none; color: inherit; transition: all 0.2s; display: flex; flex-direction: column; gap: 10px; }
+  .lab-card:hover { border-color: #00c875; box-shadow: 0 4px 14px rgba(0,0,0,0.06); transform: translateY(-2px); }
+  .lab-head { display: flex; align-items: center; gap: 12px; }
+  .lab-logo { width: 46px; height: 46px; border-radius: 10px; object-fit: contain; background: #f0faf5; border: 1px solid #e6f9f1; flex-shrink: 0; }
+  .lab-logo-ph { width: 46px; height: 46px; border-radius: 10px; background: #e6f9f1; color: #00875a; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 600; flex-shrink: 0; }
+  .lab-name { font-size: 16px; font-weight: 600; color: #1a1a1a; }
+  .lab-desc { font-size: 13px; color: #666; line-height: 1.6; }
+  .lab-company { font-size: 12px; color: #00875a; background: #f0faf5; border: 1px solid #d6f3e6; border-radius: 8px; padding: 4px 10px; align-self: flex-start; }
+  .lab-cta { font-size: 13px; color: #1a73e8; font-weight: 500; margin-top: auto; }
+  .empty { text-align: center; color: #999; font-size: 14px; margin-top: 40px; }
+</style>
+</head>
+<body>
+
+<h1>מעבדות מחקר</h1>
+<p class="subtitle">בחרו מעבדה לצפייה בעמוד המעבדה המלא</p>
+
+<input type="text" class="search" id="search" placeholder="חיפוש מעבדה לפי שם, תיאור או חברה...">
+
+<div class="grid" id="grid"></div>
+<p class="empty" id="empty" style="display:none">לא נמצאו מעבדות תואמות</p>
+
+<script src="data.js"></script>
+<script>
+function esc(s) {
+  return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) {
+    return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+  });
+}
+
+function logoHtml(lab) {
+  if (lab.logo) return '<img class="lab-logo" src="' + esc(lab.logo) + '" alt="' + esc(lab.name) + '">';
+  var initial = (lab.name || "?").trim().charAt(0);
+  return '<div class="lab-logo-ph">' + esc(initial) + "</div>";
+}
+
+function render(list) {
+  var grid = document.getElementById("grid");
+  grid.innerHTML = list.map(function (lab) {
+    return '<a class="lab-card" href="lab.html?id=' + encodeURIComponent(lab.id) + '">' +
+      '<div class="lab-head">' + logoHtml(lab) +
+        '<span class="lab-name">' + esc(lab.name) + "</span></div>" +
+      (lab.shortDescription ? '<p class="lab-desc">' + esc(lab.shortDescription) + "</p>" : "") +
+      (lab.leadingCompany ? '<span class="lab-company">🏢 ' + esc(lab.leadingCompany) + "</span>" : "") +
+      '<span class="lab-cta">לעמוד המעבדה ←</span>' +
+      "</a>";
+  }).join("");
+  document.getElementById("empty").style.display = list.length ? "none" : "block";
+}
+
+function filterLabs(q) {
+  q = q.trim().toLowerCase();
+  if (!q) return LABS;
+  return LABS.filter(function (lab) {
+    return [lab.name, lab.shortDescription, lab.leadingCompany].join(" ").toLowerCase().indexOf(q) !== -1;
+  });
+}
+
+document.getElementById("search").addEventListener("input", function () {
+  render(filterLabs(this.value));
+});
+
+render(LABS);
+</script>
+</body>
+</html>

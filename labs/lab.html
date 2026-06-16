@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="he">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>עמוד מעבדה</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif; background: #f5f5f3; min-height: 100vh; padding: 24px 16px; direction: rtl; color: #1a1a1a; }
+  .wrap { max-width: 880px; margin: 0 auto; }
+  .back { display: inline-block; font-size: 13px; color: #1a73e8; text-decoration: none; margin-bottom: 16px; }
+  .back:hover { text-decoration: underline; }
+  .hero { background: #fff; border: 1px solid #e5e5e5; border-radius: 16px; padding: 24px; margin-bottom: 16px; }
+  .hero-top { display: flex; align-items: center; gap: 16px; margin-bottom: 14px; }
+  .logo { width: 64px; height: 64px; border-radius: 14px; object-fit: contain; background: #f0faf5; border: 1px solid #e6f9f1; flex-shrink: 0; }
+  .logo-ph { width: 64px; height: 64px; border-radius: 14px; background: #e6f9f1; color: #00875a; display: flex; align-items: center; justify-content: center; font-size: 26px; font-weight: 700; flex-shrink: 0; }
+  h1 { font-size: 24px; font-weight: 700; }
+  .short-desc { font-size: 14px; color: #555; line-height: 1.7; margin-bottom: 14px; }
+  .value-prop { background: #f0faf5; border: 1px solid #d6f3e6; border-radius: 12px; padding: 14px 16px; font-size: 14px; color: #00614a; line-height: 1.7; }
+  .value-prop .vp-label { display: block; font-size: 12px; font-weight: 600; color: #00875a; margin-bottom: 4px; }
+  .section { background: #fff; border: 1px solid #e5e5e5; border-radius: 14px; padding: 20px; margin-bottom: 14px; }
+  .section h2 { font-size: 15px; font-weight: 600; color: #1a1a1a; margin-bottom: 14px; padding-bottom: 8px; border-bottom: 1px solid #f0f0f0; display: flex; align-items: center; gap: 8px; }
+  .fields { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  @media (max-width: 620px) { .fields { grid-template-columns: 1fr; } }
+  .field { }
+  .field.full { grid-column: 1 / -1; }
+  .field .label { font-size: 12px; color: #888; margin-bottom: 4px; font-weight: 500; }
+  .field .value { font-size: 14px; color: #1a1a1a; line-height: 1.6; }
+  .field .value.empty { color: #bbb; font-style: italic; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip { background: #f5f5f5; border: 1px solid #e5e5e5; border-radius: 8px; padding: 3px 11px; font-size: 13px; color: #444; }
+  .not-found { background: #fff; border: 1px solid #e5e5e5; border-radius: 14px; padding: 40px; text-align: center; color: #888; }
+</style>
+</head>
+<body>
+<div class="wrap" id="wrap">טוען…</div>
+
+<script src="data.js"></script>
+<script>
+function esc(s) {
+  return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) {
+    return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+  });
+}
+
+function getParam(name) {
+  var m = new RegExp("[?&]" + name + "=([^&]*)").exec(window.location.search);
+  return m ? decodeURIComponent(m[1]) : null;
+}
+
+// שדה טקסט בודד
+function textField(label, value, full) {
+  var hasVal = value != null && String(value).trim() !== "";
+  return '<div class="field' + (full ? " full" : "") + '">' +
+    '<div class="label">' + esc(label) + "</div>" +
+    '<div class="value' + (hasVal ? "" : " empty") + '">' +
+      (hasVal ? esc(value) : "—") + "</div></div>";
+}
+
+// שדה רשימה (chips)
+function listField(label, items, full) {
+  items = Array.isArray(items) ? items.filter(function (x) { return x != null && String(x).trim() !== ""; }) : [];
+  var inner = items.length
+    ? '<div class="chips">' + items.map(function (x) { return '<span class="chip">' + esc(x) + "</span>"; }).join("") + "</div>"
+    : '<div class="value empty">—</div>';
+  return '<div class="field' + (full ? " full" : "") + '">' +
+    '<div class="label">' + esc(label) + "</div>" + inner + "</div>";
+}
+
+function logoHtml(lab) {
+  if (lab.logo) return '<img class="logo" src="' + esc(lab.logo) + '" alt="' + esc(lab.name) + '">';
+  var initial = (lab.name || "?").trim().charAt(0);
+  return '<div class="logo-ph">' + esc(initial) + "</div>";
+}
+
+function renderLab(lab) {
+  return '<a class="back" href="index.html">← חזרה לרשימת המעבדות</a>' +
+
+    // כותרת: שם, לוגו, תיאור קצר, הצעת ערך ייחודית
+    '<div class="hero">' +
+      '<div class="hero-top">' + logoHtml(lab) +
+        "<h1>" + esc(lab.name) + "</h1></div>" +
+      (lab.shortDescription ? '<p class="short-desc">' + esc(lab.shortDescription) + "</p>" : "") +
+      (lab.valueProposition
+        ? '<div class="value-prop"><span class="vp-label">הצעת ערך ייחודית</span>' + esc(lab.valueProposition) + "</div>"
+        : "") +
+    "</div>" +
+
+    // פעילות עסקית
+    '<div class="section"><h2>🏢 פעילות עסקית</h2><div class="fields">' +
+      textField("חברה עסקית מובילה", lab.leadingCompany) +
+      textField("מימון ייעודי", lab.dedicatedFunding) +
+      listField("שותפים", lab.partners, true) +
+      textField("פיתוח עסקי", lab.businessDevelopment) +
+      textField("איפה יושבים", lab.location) +
+      textField("כנס שנתי בחו\"ל", lab.annualConference) +
+    "</div></div>" +
+
+    // אתגרים
+    '<div class="section"><h2>🎯 אתגרים</h2><div class="fields">' +
+      listField("אתגרים", lab.challenges, true) +
+    "</div></div>" +
+
+    // חוקרים ואקדמיה בבן-גוריון
+    '<div class="section"><h2>🎓 חוקרים ואקדמיה באוניברסיטת בן-גוריון</h2><div class="fields">' +
+      listField("חוקרים באוניברסיטת בן-גוריון", lab.bguResearchers, true) +
+      listField("מכוני מחקר", lab.researchInstitutes) +
+      listField("מחלקות", lab.departments) +
+      listField("פקולטות", lab.faculties, true) +
+    "</div></div>" +
+
+    // תשתיות מחקר
+    '<div class="section"><h2>🔬 תשתיות מחקר בבן-גוריון</h2><div class="fields">' +
+      listField("תשתיות ל-TRL 2-5", lab.infraTrl2to5) +
+      listField("תשתיות ל-TRL 6+", lab.infraTrl6plus) +
+      listField("תשתיות ברובע", lab.infraQuarter) +
+      listField("תשתיות בבאר שבע", lab.infraBeerSheva) +
+      listField("תשתיות בנגב", lab.infraNegev) +
+    "</div></div>" +
+
+    // מימון
+    '<div class="section"><h2>💰 מימון</h2><div class="fields">' +
+      textField("מימון מרשות החדשנות", lab.innovationAuthorityFunding) +
+      textField("מימון מהוריזון אירופה", lab.horizonEuropeFunding) +
+    "</div></div>" +
+
+    // הובלה מדעית
+    '<div class="section"><h2>👤 הובלה מדעית</h2><div class="fields">' +
+      textField("מוביל מדעי", lab.scientificLead, true) +
+    "</div></div>";
+}
+
+(function () {
+  var id = getParam("id");
+  var lab = (typeof LABS !== "undefined") && LABS.filter(function (l) { return String(l.id) === String(id); })[0];
+  var wrap = document.getElementById("wrap");
+  if (!lab) {
+    wrap.innerHTML = '<a class="back" href="index.html">← חזרה לרשימת המעבדות</a>' +
+      '<div class="not-found">המעבדה לא נמצאה.</div>';
+    document.title = "מעבדה לא נמצאה";
+    return;
+  }
+  document.title = lab.name + " — עמוד מעבדה";
+  wrap.innerHTML = renderLab(lab);
+})();
+</script>
+</body>
+</html>
